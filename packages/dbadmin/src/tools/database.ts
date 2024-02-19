@@ -73,5 +73,5 @@ init(envFile, sqlFile)
     })
     .catch(e => {
         console.log("finished with errors: " + JSON.stringify(e))
-        process.exit(1)
+        process.exit(2)
     })
