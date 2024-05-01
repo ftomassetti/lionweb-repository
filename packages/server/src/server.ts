@@ -11,10 +11,58 @@ import { registerBulkApi } from "@lionweb/repository-bulkapi"
 import { registerAdditionalApi } from "@lionweb/repository-additionalapi"
 import { registerLanguagesApi } from "@lionweb/repository-languages"
 import { HttpClientErrors } from "@lionweb/repository-common"
+//import { responseTime } from "response-time"
+
+// import pkg from 'response-time';
+// const { responseTime } = pkg;
+
 
 dotenv.config()
 
 export const app: Express = express()
+
+// app.use(responseTime.responseTime(function (req, res, time) {
+//     console.log(`response time ${time}`)
+// }))
+
+const getDurationInMilliseconds = (start) => {
+    const NS_PER_SEC = 1e9
+    const NS_TO_MS = 1e6
+    const diff = process.hrtime(start)
+
+    return (diff[0] * NS_PER_SEC + diff[1]) / NS_TO_MS
+}
+
+let measurements: number[] = []
+
+function printMeasurements() {
+    let sum = 0
+    measurements.forEach((m)=>sum+=m)
+    console.log(`   n measurements: ${measurements.length}, total: ${sum}, average: ${sum/measurements.length}`)
+}
+
+app.use((req, res, next) => {
+    //console.log(`${req.method} ${req.originalUrl} [STARTED]`)
+    const start = process.hrtime()
+
+    res.on('finish', () => {
+        const durationInMilliseconds = getDurationInMilliseconds (start)
+        if (req.originalUrl == "/bulk/store") {
+            console.log(`    ${req.method} ${req.originalUrl} [FINISHED] ${durationInMilliseconds.toLocaleString()} ms`)
+            measurements.push(durationInMilliseconds)
+            printMeasurements()
+        }
+
+    })
+
+    res.on('close', () => {
+        const durationInMilliseconds = getDurationInMilliseconds (start)
+            //console.log(`    ${req.method} ${req.originalUrl} [CLOSED] ${durationInMilliseconds.toLocaleString()} ms`)
+    })
+
+    next()
+})
+
 
 // Allow access,
 // ERROR Access to XMLHttpRequest from origin has been blocked by CORS policy:
