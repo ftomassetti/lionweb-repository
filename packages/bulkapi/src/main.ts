@@ -5,6 +5,8 @@ import { runWithTry } from "@lionweb/repository-common";
 import { BulkApiWorker } from "./controllers/BulkApiWorker.js";
 import { BulkApi, BulkApiImpl } from "./controllers/index.js";
 import { LionWebQueries, QueryMaker } from "./database/index.js";
+import { Pool } from "pg"
+import { from as copyFrom } from "pg-copy-streams"
 
 /**
  * Object containing 'global' contextual objects for this API.
@@ -18,6 +20,10 @@ export class BulkApiContext {
     queries: LionWebQueries
     queryMaker: QueryMaker
 
+    // for copy
+    // pool: Pool
+    // client: any
+
     /**
      * Create the object and initialize all its members.
      * @param dbConnection  The database connection to be used by this API
@@ -30,6 +36,8 @@ export class BulkApiContext {
         this.bulkApiWorker = new BulkApiWorker(this)
         this.queries = new LionWebQueries(this)
         this.queryMaker = new QueryMaker(this)
+        // this.pool = new Pool()
+        // this.client = client
     }
 }
 

@@ -27,6 +27,10 @@ import {
 } from "@lionweb/validation"
 import { BulkApiContext } from "../main.js"
 import { sqlArrayFromNodeIdArray } from "./QueryNode.js"
+// import { Pool } from "pg"
+import { from as copyFrom } from "pg-copy-streams"
+import {Readable} from "stream"
+import { pipeline } from 'node:stream/promises'
 
 /**
  * Class that builds SQL queries.
@@ -305,6 +309,47 @@ export class QueryMaker {
     //     logger.dbLog("Queries check reserved ids for " + clientId + " with nodes: " + tbsNodesToCreate.map(n => n.id))
     //    
     // }
+
+    /**
+     * Does the same as dbInsertNodeArray, but using copy
+     * @param tbsNodesToCreate
+     */
+    public async bulkDbInsertNodeArray(tbsNodesToCreate: LionWebJsonNode[]) {
+        const client = await this.context.dbConnection.$pool.connect()
+        const ingestStream = client.query(copyFrom(`COPY ${NODES_TABLE} FROM STDIN`))
+        const sourceStream = new Readable()
+        tbsNodesToCreate.forEach(node => {
+                sourceStream.push(`${node.id}\t${node.classifier.language}\t${node.classifier.version}\t${node.classifier.key}\t${node.annotations}\t${node.parent}\n`);
+        })
+
+        sourceStream.push(null)
+        try {
+            let rs : ReadableStream = sourceStream;
+            await pipeline(sourceStream, ingestStream)
+        } finally {
+            client.release()
+        }
+        //     query += this.context.pgp.helpers.insert(node_rows, TableHelpers.NODES_COLUMN_SET) + ";\n"
+        //     query += this.insertContainments(tbsNodesToCreate)
+        //
+        //     // INSERT Properties
+        //     const insertProperties = tbsNodesToCreate.flatMap(node =>
+        //         node.properties.map(prop => ({ node_id: node.id, property: prop.property, value: prop.value }))
+        //     )
+        //     if (insertProperties.length !== 0) {
+        //         query += this.context.pgp.helpers.insert(insertProperties, TableHelpers.PROPERTIES_COLUMN_SET) + ";\n"
+        //     }
+        //
+        //     // INSERT References
+        //     const insertReferences = tbsNodesToCreate.flatMap(node =>
+        //         node.references.map(reference => ({ node_id: node.id, reference: reference.reference, targets: reference.targets }))
+        //     )
+        //     if (insertReferences.length !== 0) {
+        //         query += this.context.pgp.helpers.insert(insertReferences, TableHelpers.REFERENCES_COLUMN_SET) + ";\n"
+        //     }
+        //     return query
+        // }
+    }
 
     /**
      * Insert _tbsNodesToCreate in the lionweb_nodes table
