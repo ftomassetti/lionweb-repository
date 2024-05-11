@@ -73,8 +73,8 @@ export class BulkApiWorker {
         return { status: HttpSuccessCodes.Ok, query: "", queryResult: EMPTY_SUCCES_RESPONSE }
     }
 
-    bulkStore = async (clientId: string, chunk: LionWebJsonChunk): Promise<QueryReturnType<StoreResponse>> => {
-        return await this.context.queries.store(clientId, chunk)
+    bulkStore = async (clientId: string, chunk: LionWebJsonChunk,timeTracker): Promise<QueryReturnType<StoreResponse>> => {
+        return await this.context.queries.store(clientId, chunk,timeTracker)
     }
 
     /**

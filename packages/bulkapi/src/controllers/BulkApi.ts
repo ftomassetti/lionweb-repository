@@ -128,12 +128,16 @@ export class BulkApiImpl implements BulkApi {
      * @param response `ok`  if everything is correct
      */
     store = async (request: Request, response: Response): Promise<void> => {
+        request["timeTracker"].milestone("start_processing")
+
         logger.requestLog(` * store request received, with body of ${request.headers["content-length"]} bytes`)
         const clientId = getStringParam(request, "clientId")
         const chunk: LionWebJsonChunk = request.body
         const validator = new LionWebValidator(chunk, getLanguageRegistry())
         validator.validateSyntax()
         validator.validateReferences()
+        request["timeTracker"].milestone("validation_completed")
+        request["nnodes"] = chunk.nodes.length
         if (validator.validationResult.hasErrors()) {
             logger.requestLog("STORE VALIDATION ERROR " + validator.validationResult.issues.map(issue => issue.errorMsg()))
             lionwebResponse<StoreResponse>(response, HttpClientErrors.PreconditionFailed, {
@@ -147,8 +151,11 @@ export class BulkApiImpl implements BulkApi {
                 messages: [clientId.error]
             })
         } else {
-            const result = await this.ctx.bulkApiWorker.bulkStore(clientId, chunk)
+            request["timeTracker"].milestone("result_calculated")
+            const result = await this.ctx.bulkApiWorker.bulkStore(clientId, chunk, request["timeTracker"])
+            request["timeTracker"].milestone("response_prepared")
             lionwebResponse<StoreResponse>(response, result.status, result.queryResult)
+            request["timeTracker"].milestone("end_processing")
         }
     }
 

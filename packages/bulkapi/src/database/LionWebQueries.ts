@@ -116,7 +116,7 @@ export class LionWebQueries {
      *
      * @param toBeStoredChunk
      */
-    store = async (clientId: string, toBeStoredChunk: LionWebJsonChunk): Promise<QueryReturnType<StoreResponse>> => {
+    store = async (clientId: string, toBeStoredChunk: LionWebJsonChunk,timeTracker): Promise<QueryReturnType<StoreResponse>> => {
         logger.dbLog("LionWebQueries.store")
         if (toBeStoredChunk === null || toBeStoredChunk === undefined) {
             return {
@@ -134,6 +134,7 @@ export class LionWebQueries {
         const databaseChunk = await this.context.bulkApiWorker.bulkRetrieve(clientId, tbsNodeAndChildIds, 0)
         const databaseChunkWrapper = new LionWebJsonChunkWrapper(databaseChunk.queryResult.chunk)
         logger.dbLog("DBChunk " + JSON.stringify(databaseChunkWrapper.jsonChunk))
+        timeTracker.milestone("response_preparation_1")
         
         // Check whether there are new nodes without a parent
         // TODO If node already exists as a partition this is ok
@@ -153,6 +154,7 @@ export class LionWebQueries {
         diff.diffLwChunk(databaseChunkWrapper.jsonChunk, toBeStoredChunk)
         logger.dbLog("STORE.CHANGES ")
         logger.dbLog(diff.diffResult.changes.map(ch => "    " + ch.changeMsg()))
+        timeTracker.milestone("response_preparation_2")
 
         const toBeStoredNewNodes = diff.diffResult.changes.filter((ch): ch is NodeAdded => ch.changeType === "NodeAdded")
         const addedChildren: ChildAdded[] = diff.diffResult.changes.filter((ch): ch is ChildAdded => ch instanceof ChildAdded)
@@ -219,6 +221,7 @@ export class LionWebQueries {
             implicitlyRemovedChildNodes.queryResult.chunk.nodes.map(node => node.parent),
             0
         )
+        timeTracker.milestone("response_preparation_3")
         // Now all changes are turned into queries.
         let queries = ""
         queries += this.context.queryMaker.upsertQueriesForPropertyChanges(propertyChanged)
@@ -251,13 +254,29 @@ export class LionWebQueries {
                 }
             }
         }
-        queries += this.context.queryMaker.dbInsertNodeArray(toBeStoredNewNodes.map(ch => (ch as NodeAdded).node))
-        // And run them on the database
-        if (queries !== "") {
-            logger.dbLog("QUERIES " + queries)
-            await this.context.dbConnection.query(queries)
-        }
-        return { status: HttpSuccessCodes.Ok, query: queries, queryResult: EMPTY_SUCCES_RESPONSE
+
+        const batchSize = 1000
+        if (toBeStoredNewNodes.length > batchSize) {
+            console.log(`Activating large nodes insertion logic, as we need to insert ${toBeStoredNewNodes.length} nodes`)
+            if (queries !== "") {
+                logger.dbLog("QUERIES BEFORE BIG INSERTION" + queries);
+                await this.context.dbConnection.query(queries);
+            }
+            await this.context.queryMaker.dbInsertNodeArrayForBigData(toBeStoredNewNodes.map(ch => ch.node), batchSize, 0);
+            return {
+                status: HttpSuccessCodes.Ok, query: '>Not available>', queryResult: EMPTY_SUCCES_RESPONSE
+            };
+        } else {
+            queries += this.context.queryMaker.dbInsertNodeArray(toBeStoredNewNodes.map(ch => ch.node));
+            timeTracker.milestone("response_preparation_4");
+            // And run them on the database
+            if (queries !== "") {
+                logger.dbLog("QUERIES " + queries);
+                await this.context.dbConnection.query(queries);
+            }
+            return {
+                status: HttpSuccessCodes.Ok, query: queries, queryResult: EMPTY_SUCCES_RESPONSE
+            };
         }
     }
 

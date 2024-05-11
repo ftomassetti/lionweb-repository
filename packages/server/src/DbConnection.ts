@@ -1,6 +1,7 @@
 import { logger } from "@lionweb/repository-common";
 import pgPromise from "pg-promise"
 import dotenv from "dotenv"
+import * as fs from "node:fs";
 
 // Initialize and export the database connection with configuration from _env_
 
@@ -14,6 +15,10 @@ export const config = {
     port: port,
     user: process.env.PGUSER || "postgres",
     password: process.env.PGPASSWORD || "lionweb",
+    ssl: {
+        rejectUnauthorized: false,
+        ca: fs.readFileSync('/Users/federico/Downloads/ca-certificate.crt').toString(),
+    },
 }
 
 logger.dbLog("POSTGRES CONFIG: " + JSON.stringify(config, null, 2))

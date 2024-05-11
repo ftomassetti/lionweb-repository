@@ -306,6 +306,82 @@ export class QueryMaker {
     //    
     // }
 
+    public async dbInsertNodeArrayForBigData(tbsNodesToCreate: LionWebJsonNode[], batchSize: number, startIndex: number) {
+        {
+            const availableLength = tbsNodesToCreate.length - startIndex;
+            const endIndex = availableLength < batchSize ? tbsNodesToCreate.length : startIndex + batchSize;
+
+            let query = ""
+            const nodesToActuallyInsert = tbsNodesToCreate.slice(startIndex, endIndex);
+            const node_rows: NodeRecord[] = nodesToActuallyInsert.map(node => {
+                return {
+                    id: node.id,
+                    classifier_language: node.classifier.language,
+                    classifier_version: node.classifier.version,
+                    classifier_key: node.classifier.key,
+                    annotations: node.annotations,
+                    parent: node.parent
+                }
+            })
+            query += this.context.pgp.helpers.insert(node_rows, TableHelpers.NODES_COLUMN_SET) + ";\n"
+            query += this.insertContainments(nodesToActuallyInsert)
+
+            // INSERT Properties
+            const insertProperties = nodesToActuallyInsert.flatMap(node =>
+                node.properties.map(prop => ({ node_id: node.id, property: prop.property, value: prop.value }))
+            )
+            if (insertProperties.length !== 0) {
+                query += this.context.pgp.helpers.insert(insertProperties, TableHelpers.PROPERTIES_COLUMN_SET) + ";\n"
+            }
+
+            // INSERT References
+            const insertReferences = nodesToActuallyInsert.flatMap(node =>
+                node.references.map(reference => ({ node_id: node.id, reference: reference.reference, targets: reference.targets }))
+            )
+            if (insertReferences.length !== 0) {
+                query += this.context.pgp.helpers.insert(insertReferences, TableHelpers.REFERENCES_COLUMN_SET) + ";\n"
+            }
+            await this.context.dbConnection.query(query)
+
+            if (availableLength > batchSize) {
+                await this.dbInsertNodeArrayForBigData(tbsNodesToCreate, batchSize, startIndex + batchSize);
+            }
+        }
+            // let query = "-- create new nodes\n"
+            // if (tbsNodesToCreate.length === 0) {
+            //     return query
+            // }
+            // const node_rows: NodeRecord[] = tbsNodesToCreate.map(node => {
+            //     return {
+            //         id: node.id,
+            //         classifier_language: node.classifier.language,
+            //         classifier_version: node.classifier.version,
+            //         classifier_key: node.classifier.key,
+            //         annotations: node.annotations,
+            //         parent: node.parent
+            //     }
+            // })
+            // query += this.context.pgp.helpers.insert(node_rows, TableHelpers.NODES_COLUMN_SET) + ";\n"
+            // query += this.insertContainments(tbsNodesToCreate)
+            //
+            // // INSERT Properties
+            // const insertProperties = tbsNodesToCreate.flatMap(node =>
+            //     node.properties.map(prop => ({ node_id: node.id, property: prop.property, value: prop.value }))
+            // )
+            // if (insertProperties.length !== 0) {
+            //     query += this.context.pgp.helpers.insert(insertProperties, TableHelpers.PROPERTIES_COLUMN_SET) + ";\n"
+            // }
+            //
+            // // INSERT References
+            // const insertReferences = tbsNodesToCreate.flatMap(node =>
+            //     node.references.map(reference => ({ node_id: node.id, reference: reference.reference, targets: reference.targets }))
+            // )
+            // if (insertReferences.length !== 0) {
+            //     query += this.context.pgp.helpers.insert(insertReferences, TableHelpers.REFERENCES_COLUMN_SET) + ";\n"
+            // }
+            // return query
+    }
+
     /**
      * Insert _tbsNodesToCreate in the lionweb_nodes table
      * These nodes are all new nodes.

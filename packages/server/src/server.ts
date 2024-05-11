@@ -11,6 +11,7 @@ import { registerBulkApi } from "@lionweb/repository-bulkapi"
 import { registerAdditionalApi } from "@lionweb/repository-additionalapi"
 import { registerLanguagesApi } from "@lionweb/repository-languages"
 import { HttpClientErrors } from "@lionweb/repository-common"
+import { unlink, appendFile } from 'node:fs/promises';
 //import { responseTime } from "response-time"
 
 // import pkg from 'response-time';
@@ -33,6 +34,14 @@ const getDurationInMilliseconds = (start) => {
     return (diff[0] * NS_PER_SEC + diff[1]) / NS_TO_MS
 }
 
+const getDurationInMillisecondsDiff = (start, end) => {
+    const NS_PER_SEC = 1e9
+    const NS_TO_MS = 1e6
+    const diff = [end[0]-start[0], end[1]-start[1]]
+
+    return (diff[0] * NS_PER_SEC + diff[1]) / NS_TO_MS
+}
+
 let measurements: number[] = []
 
 function printMeasurements() {
@@ -41,22 +50,53 @@ function printMeasurements() {
     console.log(`   n measurements: ${measurements.length}, total: ${sum}, average: ${sum/measurements.length}`)
 }
 
+await unlink('performancelog.csv').catch(() => void 0)
+await appendFile('performancelog.csv', 'nnodes,time,start_processing,validation_completed,result_calculated,response_preparation_1,response_preparation_2,response_preparation_3,response_preparation_4,response_prepared,end_processing\n')
+
+class Track {
+    public name:string;
+    public timeFromStart: number;
+    public trackTime: number;
+}
+
+class TimeTracker {
+    public start: [number, number];
+    lastMilestone: [number, number];
+    public tracks : Track[] = [];
+    constructor() {
+        this.start = process.hrtime();
+        this.lastMilestone = this.start;
+    }
+    milestone(name: string) {
+        let t = new Track();
+        let time = process.hrtime();
+        t.name = name;
+        t.timeFromStart = getDurationInMillisecondsDiff(this.start, time);
+        t.trackTime = getDurationInMillisecondsDiff(this.lastMilestone, time);
+        this.tracks.push(t);
+        this.lastMilestone = time;
+    }
+}
+
 app.use((req, res, next) => {
     //console.log(`${req.method} ${req.originalUrl} [STARTED]`)
-    const start = process.hrtime()
+    //const start = process.hrtime()
+    const timeTracker = new TimeTracker();
+    req["timeTracker"] = timeTracker;
 
-    res.on('finish', () => {
-        const durationInMilliseconds = getDurationInMilliseconds (start)
+    res.on('finish', async () => {
+        const durationInMilliseconds = getDurationInMilliseconds (timeTracker.start)
         if (req.originalUrl == "/bulk/store") {
             console.log(`    ${req.method} ${req.originalUrl} [FINISHED] ${durationInMilliseconds.toLocaleString()} ms`)
             measurements.push(durationInMilliseconds)
             printMeasurements()
+            await appendFile('performancelog.csv', `${req["nnodes"]},${durationInMilliseconds},${timeTracker.tracks.map((track)=>track.trackTime).join(",")}\n`)
         }
 
     })
 
     res.on('close', () => {
-        const durationInMilliseconds = getDurationInMilliseconds (start)
+        const durationInMilliseconds = getDurationInMilliseconds (timeTracker.start)
             //console.log(`    ${req.method} ${req.originalUrl} [CLOSED] ${durationInMilliseconds.toLocaleString()} ms`)
     })
 

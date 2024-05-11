@@ -2,27 +2,37 @@ import pgPromise from "pg-promise"
 import {PGDB, PGHOST, PGUSER} from "./configuration.js";
 import { CREATE_DATABASE_SQL } from "./create-database-sql.js"
 import { INIT_TABLES_SQL } from "./init-tables-sql.js"
+import fs from "node:fs";
 
 type PostgresConfig = {
     host: string
     port: number
     user: string
     database?: string
-    password: string
+    password: string,
+    ssl: any
 }
 
 const CREATE_CONFIG: PostgresConfig = {
     host: PGHOST,
     port: parseInt(process.env.PGPORT || "5432", 10),
     user: PGUSER,
-    password: process.env.PGPASSWORD || "lionweb"
+    password: process.env.PGPASSWORD || "lionweb",
+    ssl: {
+        rejectUnauthorized: false,
+        ca: fs.readFileSync('/Users/federico/Downloads/ca-certificate.crt').toString()
+    }
 }
 const INIT_CONFIG: PostgresConfig = {
     host: PGHOST,
     database: PGDB,
     port: parseInt(process.env.PGPORT || "5432", 10),
     user: PGUSER,
-    password: process.env.PGPASSWORD || "lionweb"
+    password: process.env.PGPASSWORD || "lionweb",
+    ssl: {
+        rejectUnauthorized: false,
+        ca: fs.readFileSync('/Users/federico/Downloads/ca-certificate.crt').toString(),
+    },
 }
 
 const init = async (config: PostgresConfig, sqlFile: string) => {
