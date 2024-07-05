@@ -141,12 +141,15 @@ export class BulkApiImpl implements BulkApi {
      * @param response `ok`  if everything is correct
      */
     store = async (request: Request, response: Response): Promise<void> => {
+        const t0 = Date.now();
         requestLogger.info(` * store request received, with body of ${request.headers["content-length"]} bytes`)
         const clientId = getStringParam(request, "clientId")
         const chunk: LionWebJsonChunk = request.body
         const validator = new LionWebValidator(chunk, getLanguageRegistry())
         validator.validateSyntax()
         validator.validateReferences()
+        const t1 = Date.now();
+        console.log(`VALIDATED ${t1 - t0}ms`)
         if (validator.validationResult.hasErrors()) {
             requestLogger.error("STORE VALIDATION ERROR " + validator.validationResult.issues.map(issue => issue.errorMsg()))
             lionwebResponse<StoreResponse>(response, HttpClientErrors.PreconditionFailed, {
@@ -161,9 +164,14 @@ export class BulkApiImpl implements BulkApi {
             })
         } else {
             const repositoryData: RepositoryData = {clientId: clientId, repository: getRepositoryParameter(request)}
+
             const result = await this.ctx.bulkApiWorker.bulkStore(repositoryData, chunk)
+            const t2 = Date.now();
+            console.log(`STORED ${t2-t1}ms`)
             result.queryResult.messages.push({ kind: "QueryFromApi", message: result.query })
             lionwebResponse<StoreResponse>(response, result.status, result.queryResult)
+            const t3 = Date.now();
+            console.log(`ANSWER SENT ${t3-t2}ms`)
         }
     }
 
