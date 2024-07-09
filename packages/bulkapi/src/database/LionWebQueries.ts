@@ -42,6 +42,9 @@ import {
     QueryNodeForIdList,
     versionResultToResponse
 } from "./QueryNode.js"
+import {storeNodes} from "./CopySupport.js";
+import pg from 'pg';
+
 
 export type NodeTreeResultType = {
     id: string
@@ -196,6 +199,7 @@ export class LionWebQueries {
         const annotationOrderChanged = diff.diffResult.changes.filter(
             (ch): ch is AnnotationOrderChanged => ch instanceof AnnotationOrderChanged
         )
+        const useCopy = toBeStoredNewNodes.length > 100;
 
         // Only children that already exist in the database
         const databaseChildrenOfNewNodes = this.getContainedIds(toBeStoredNewNodes.map(ch => ch.node)).flatMap(id => {
@@ -309,11 +313,21 @@ export class LionWebQueries {
                 }
             }
         }
-        queries += this.context.queryMaker.dbInsertNodeArray(toBeStoredNewNodes.map(ch => (ch as NodeAdded).node))
+        if (!useCopy) {
+            queries += this.context.queryMaker.dbInsertNodeArray(toBeStoredNewNodes.map(ch => (ch as NodeAdded).node))
+        }
+
+        async function considerCopy(pool: pg.Pool, nodesToBeAdded: NodeAdded[]) {
+            if (useCopy) {
+                storeNodes(await pool.connect(), nodesToBeAdded.map(e => e.node))
+            }
+        }
+
         // And run them on the database
         if (queries !== "") {
             queries = nextRepoVersionQuery(repositoryData.clientId) + queries
             const [multiResult] = await task.multi(repositoryData, queries)
+            await considerCopy(this.context.pgPool, toBeStoredNewNodes)
             return {
                 status: HttpSuccessCodes.Ok,
                 query: queries,
@@ -325,6 +339,7 @@ export class LionWebQueries {
         } else {
             // Nothing to change, empty query
             const version = await this.getRepoVersion(repositoryData)
+            await considerCopy(this.context.pgPool, toBeStoredNewNodes)
             return {
                 status: HttpSuccessCodes.Ok,
                 query: queries,

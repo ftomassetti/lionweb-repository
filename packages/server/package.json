@@ -24,15 +24,15 @@
     "manualtest": "node dist/test/ManualTests.js"
   },
   "devDependencies": {
-    "prettier": "3.1.0",
+    "@types/chai": "4.3.11",
+    "@types/cors": "^2.8.17",
+    "@types/mocha": "10.0.1",
     "@typescript-eslint/eslint-plugin": "6.13.2",
     "@typescript-eslint/parser": "6.13.2",
-    "@types/chai": "4.3.11",
-    "@types/mocha": "10.0.1",
-    "@types/cors": "^2.8.17",
-    "eslint": "8.56.0",
     "chai": "4.3.10",
+    "eslint": "8.56.0",
     "mocha": "10.2.0",
+    "prettier": "3.1.0",
     "ts-node": "10.9.2",
     "typescript": "5.2.2"
   },
@@ -53,6 +53,7 @@
     "fs-extra": "11.1.1",
     "nodemon": "3.0.1",
     "pg": "8.11.3",
+    "pg-copy-streams": "^6.0.6",
     "pg-promise": "11.7.8",
     "pino-http": "^10.1.0",
     "source-map-support": "0.5.21"

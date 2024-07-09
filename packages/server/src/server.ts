@@ -4,7 +4,7 @@ import express, { Express, NextFunction, Response, Request } from "express"
 import bodyParser from "body-parser"
 import cors from "cors"
 import pgPromise from "pg-promise"
-import { postgresConnectionWithDatabase, pgp, postgresConnectionWithoutDatabase } from "./DbConnection.js"
+import {postgresConnectionWithDatabase, pgp, postgresConnectionWithoutDatabase, postgresPool} from "./DbConnection.js"
 import { DbConnection, expressLogger, requestLogger, SCHEMA_PREFIX, ServerConfig } from "@lionweb/repository-common"
 import { initializeCommons } from "@lionweb/repository-common"
 import { registerDBAdmin } from "@lionweb/repository-dbadmin"
@@ -58,10 +58,11 @@ const dbConnection = DbConnection.getInstance()
 dbConnection.postgresConnection = postgresConnectionWithoutDatabase
 dbConnection.dbConnection = postgresConnectionWithDatabase
 dbConnection.pgp = pgPromise()
+dbConnection.pgPool = postgresPool
 // Must be first to initialize
 initializeCommons(pgp)
 const dbAdminApi = registerDBAdmin(app, DbConnection.getInstance(), postgresConnectionWithoutDatabase, pgp)
-registerBulkApi(app, DbConnection.getInstance(), pgp)
+registerBulkApi(app, DbConnection.getInstance(), pgp, dbConnection.pgPool)
 registerInspection(app, DbConnection.getInstance(), pgp)
 registerAdditionalApi(app, DbConnection.getInstance(), pgp)
 registerLanguagesApi(app, DbConnection.getInstance(), pgp)

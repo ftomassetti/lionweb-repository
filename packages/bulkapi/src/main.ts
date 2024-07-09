@@ -5,6 +5,7 @@ import { DbConnection, requestLogger, runWithTry } from "@lionweb/repository-com
 import { BulkApiWorker } from "./controllers/BulkApiWorker.js";
 import { BulkApi, BulkApiImpl } from "./controllers/index.js";
 import { LionWebQueries, QueryMaker } from "./database/index.js";
+import {Pool} from "pg";
 
 /**
  * Object containing 'global' contextual objects for this API.
@@ -13,6 +14,7 @@ import { LionWebQueries, QueryMaker } from "./database/index.js";
 export class BulkApiContext {
     dbConnection: DbConnection
     pgp: pgPromise.IMain<object, pg.IClient>
+    pgPool: Pool
     bulkApiWorker: BulkApiWorker
     bulkApi: BulkApi
     queries: LionWebQueries
@@ -23,7 +25,8 @@ export class BulkApiContext {
      * @param dbConnection  The database connection to be used by this API
      * @param pgp           The pg-promise object to gain access to the pg helpers
      */
-    constructor(dbConnection: DbConnection, pgp: pgPromise.IMain<object, pg.IClient>) {
+    constructor(dbConnection: DbConnection, pgp: pgPromise.IMain<object, pg.IClient>, pgPool: Pool) {
+        this.pgPool = pgPool
         this.dbConnection = dbConnection
         this.pgp = pgp
         this.bulkApi = new BulkApiImpl(this)
@@ -39,10 +42,10 @@ export class BulkApiContext {
  * @param dbConnection  The database connection to be used by this API
  * @param pgp           The pg-promise object to gain access to the pg helpers
  */
-export function registerBulkApi(app: Express, dbConnection: DbConnection, pgp: pgPromise.IMain<object, pg.IClient>) {
+export function registerBulkApi(app: Express, dbConnection: DbConnection, pgp: pgPromise.IMain<object, pg.IClient>, pgPool: Pool) {
     requestLogger.info("Registering Bulk API Module");
     // Create all objects 
-    const context = new BulkApiContext(dbConnection, pgp)
+    const context = new BulkApiContext(dbConnection, pgp, pgPool)
 
     // Add routes to application
     app.post("/bulk/createPartitions", runWithTry(context.bulkApi.createPartitions))
