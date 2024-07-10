@@ -143,6 +143,7 @@ export class LionWebQueries {
      * @param toBeStoredChunk
      */
     store = async (task: LionwebTask, repositoryData: RepositoryData, toBeStoredChunk: LionWebJsonChunk): Promise<QueryReturnType<StoreResponse>> => {
+        console.log(`Got store request with ${toBeStoredChunk.nodes.length} nodes`)
         dbLogger.info("LionWebQueries.store")
         if (toBeStoredChunk === null || toBeStoredChunk === undefined) {
             return {
@@ -200,6 +201,7 @@ export class LionWebQueries {
             (ch): ch is AnnotationOrderChanged => ch instanceof AnnotationOrderChanged
         )
         const useCopy = toBeStoredNewNodes.length > 100;
+        console.log(`useCopy? ${useCopy}`)
 
         // Only children that already exist in the database
         const databaseChildrenOfNewNodes = this.getContainedIds(toBeStoredNewNodes.map(ch => ch.node)).flatMap(id => {
@@ -289,7 +291,9 @@ export class LionWebQueries {
             implicitlyRemovedChildNodes.queryResult.chunk,
             parentsOfImplicitlyRemovedChildNodes.queryResult.chunk
         )
+        console.log(`queries A ${queries.length}`)
         queries += dbCommands.createPostgresQuery()
+        console.log(`queries B ${queries.length}`)
 
         // Check whether new node ids are not reserved for another client
         const reservedIds = await this.reservedNodeIdsByOtherClient(task, 
@@ -313,9 +317,11 @@ export class LionWebQueries {
                 }
             }
         }
+        console.log(`queries C ${queries.length}`)
         if (!useCopy) {
             queries += this.context.queryMaker.dbInsertNodeArray(toBeStoredNewNodes.map(ch => (ch as NodeAdded).node))
         }
+        console.log(`queries D ${queries.length}`)
 
         async function considerCopy(pool: pg.Pool, nodesToBeAdded: NodeAdded[]) {
             if (useCopy) {
@@ -326,7 +332,11 @@ export class LionWebQueries {
         // And run them on the database
         if (queries !== "") {
             queries = nextRepoVersionQuery(repositoryData.clientId) + queries
+            const t0 = Date.now()
+            console.log("about to execute query")
             const [multiResult] = await task.multi(repositoryData, queries)
+            const t1 = Date.now()
+            console.log(`query executed in ${t1-t0} ms`)
             await considerCopy(this.context.pgPool, toBeStoredNewNodes)
             return {
                 status: HttpSuccessCodes.Ok,
@@ -337,6 +347,7 @@ export class LionWebQueries {
                 }
             }
         } else {
+            console.log("empty query")
             // Nothing to change, empty query
             const version = await this.getRepoVersion(repositoryData)
             await considerCopy(this.context.pgPool, toBeStoredNewNodes)
