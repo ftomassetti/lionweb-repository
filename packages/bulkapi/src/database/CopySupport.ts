@@ -29,11 +29,11 @@ export async function storeNodes(client: PoolClient, nodes: LionWebJsonNode[]) :
         const queryStream = client.query(copyFrom('COPY "repository:default".lionweb_nodes FROM STDIN'))
         const inputStream = prepareInputStream(nodes);
 
-        inputStream.on('error', (err) => {
+        inputStream.on('error', (err: Error) => {
             reject(`Input stream error: ${err}`)
         });
 
-        queryStream.on('error', (err) => {
+        queryStream.on('error', (err: Error) => {
             reject(`Query stream error: ${err}`)
 
         });
