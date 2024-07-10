@@ -161,7 +161,9 @@ export class LionWebQueries {
         const tbsNodeAndChildIds = [...tbsNodeIds, ...tbsContainedChildIds.filter(cid => !tbsNodeIds.includes(cid))]
         dbLogger.info({tbsNodeAndChildIds: tbsNodeAndChildIds}, "tbsNodeAndChildIds ")
         // Retrieve nodes for all id's that exist
+        console.log("about bulkRetrieve")
         const databaseChunk = await this.context.bulkApiWorker.bulkRetrieve(repositoryData, tbsNodeAndChildIds, 0)
+        console.log("bulkRetrieve done")
         dbLogger.info("Bulk retrieve done ")
         const databaseChunkWrapper = new LionWebJsonChunkWrapper(databaseChunk.queryResult.chunk)
         dbLogger.info({chunk: databaseChunkWrapper.jsonChunk}, "database chunk")
@@ -185,6 +187,7 @@ export class LionWebQueries {
 
         const diff = new LionWebJsonDiff()
         diff.diffLwChunk(databaseChunkWrapper.jsonChunk, toBeStoredChunk)
+        console.log("diff calculated")
         dbLogger.info("STORE.CHANGES ")
         dbLogger.info(diff.diffResult.changes.map(ch => "    " + ch.changeMsg()))
 
