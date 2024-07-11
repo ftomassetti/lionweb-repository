@@ -328,7 +328,7 @@ export class LionWebQueries {
 
         async function considerCopy(pool: pg.Pool, nodesToBeAdded: NodeAdded[]) {
             if (useCopy) {
-                storeNodes(await pool.connect(), nodesToBeAdded.map(e => e.node))
+                await storeNodes(await pool.connect(), nodesToBeAdded.map(e => e.node))
             }
         }
 
