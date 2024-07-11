@@ -37,9 +37,9 @@ function prepareInputStreamProperties(nodes: LionWebJsonNode[]) : Duplex {
                 read_stream_string.push(prop.property.key);
                 read_stream_string.push(separator);
                 if (prop.value == null) {
-                    read_stream_string.push("[null]");
+                    read_stream_string.push("NULL");
                 } else {
-                    read_stream_string.push(prop.value);
+                    read_stream_string.push("\"" + prop.value + "\"");
                 }
                 read_stream_string.push(separator);
                 read_stream_string.push(node.id);
@@ -69,7 +69,7 @@ function prepareInputStreamContainments(nodes: LionWebJsonNode[]) : Duplex {
                 read_stream_string.push(separator);
                 read_stream_string.push(containment.containment.key);
                 read_stream_string.push(separator);
-                read_stream_string.push("{" + containment.children.join(",") + "}");
+                read_stream_string.push("[" + containment.children.map(e => "\"" + e + "\"").join(",") + "]");
                 read_stream_string.push(separator);
                 read_stream_string.push(node.id);
                 read_stream_string.push("\n");
