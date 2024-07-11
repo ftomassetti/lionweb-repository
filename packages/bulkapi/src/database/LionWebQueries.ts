@@ -203,7 +203,7 @@ export class LionWebQueries {
         const annotationOrderChanged = diff.diffResult.changes.filter(
             (ch): ch is AnnotationOrderChanged => ch instanceof AnnotationOrderChanged
         )
-        const useCopy = toBeStoredNewNodes.length > 100;
+        const useCopy = toBeStoredNewNodes.length > 100 && false;
         console.log(`useCopy? ${useCopy}`)
 
         // Only children that already exist in the database

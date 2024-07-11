@@ -39,7 +39,42 @@ function prepareInputStreamProperties(nodes: LionWebJsonNode[]) : Duplex {
                 if (prop.value == null) {
                     read_stream_string.push("NULL");
                 } else {
-                    read_stream_string.push("\"" + prop.value + "\"");
+                    read_stream_string.push(JSON.stringify(prop.value));
+                }
+                read_stream_string.push(separator);
+                read_stream_string.push(node.id);
+                read_stream_string.push("\n");
+            } catch (e) {
+                throw Error(`ERROR WHEN POPULATING PROPERTIES STREAM ${e}`)
+            }
+        });
+    })
+    try {
+        read_stream_string.push(null);
+    }catch (e) {
+        throw Error(`ERROR WHEN Setting the null ${e}`)
+    }
+    return read_stream_string;
+}
+
+function prepareInputStreamReferences(nodes: LionWebJsonNode[]) : Duplex {
+    const separator = "\t";
+    const read_stream_string = new Duplex();
+    nodes.forEach(node => {
+        node.properties.forEach(prop => {
+            try {
+                read_stream_string.push(prop.property.language);
+                read_stream_string.push(separator);
+                read_stream_string.push(prop.property.version);
+                read_stream_string.push(separator);
+                read_stream_string.push(prop.property.key);
+                read_stream_string.push(separator);
+
+                // {"{\\"reference\\": \\"int\\", \\"resolveInfo\\": \\"int\\"}"
+                if (prop.value == null) {
+                    read_stream_string.push("NULL");
+                } else {
+                    read_stream_string.push(JSON.stringify(prop.value));
                 }
                 read_stream_string.push(separator);
                 read_stream_string.push(node.id);
@@ -69,7 +104,7 @@ function prepareInputStreamContainments(nodes: LionWebJsonNode[]) : Duplex {
                 read_stream_string.push(separator);
                 read_stream_string.push(containment.containment.key);
                 read_stream_string.push(separator);
-                read_stream_string.push("[" + containment.children.map(e => "\"" + e + "\"").join(",") + "]");
+                read_stream_string.push("{" + containment.children.join(",") + "}");
                 read_stream_string.push(separator);
                 read_stream_string.push(node.id);
                 read_stream_string.push("\n");
@@ -87,16 +122,47 @@ function prepareInputStreamContainments(nodes: LionWebJsonNode[]) : Duplex {
 }
 
 export async function storeNodes(client: PoolClient, nodes: LionWebJsonNode[]) : Promise<void> {
+    console.log("CALL TO STORE NODES")
     await new Promise<void>((resolve, reject) => {
-        const queryStream = client.query(copyFrom('COPY "repository:default".lionweb_nodes FROM STDIN'))
-        const inputStream = prepareInputStreamNodes(nodes);
+        try {
+            const queryStream = client.query(copyFrom('COPY "repository:default".lionweb_nodes FROM STDIN'))
+            const inputStream = prepareInputStreamNodes(nodes);
+
+            inputStream.on('error', (err: Error) => {
+                console.error(`FAILURE 3 ${err}`)
+                reject(`Input stream error storeNodes : ${err}`)
+            });
+
+            queryStream.on('error', (err: Error) => {
+                console.error(`FAILURE 2 ${err}`)
+                reject(`Query stream error storeNodes: ${err}`)
+
+            });
+
+            queryStream.on('end', () => {
+                resolve();
+            });
+
+            inputStream.on('end', () => {
+                resolve();
+            });
+
+            inputStream.pipe(queryStream);
+        } catch (e) {
+            console.error(`FAILURE 1 ${e}`)
+            reject(`Error storeNodes error storeNodes: ${e}`)
+        }
+    });
+    await new Promise<void>((resolve, reject) => {
+        const queryStream = client.query(copyFrom('COPY "repository:default".lionweb_containments(containment_language,containment_version,containment_key,children,node_id) FROM STDIN'))
+        const inputStream = prepareInputStreamContainments(nodes);
 
         inputStream.on('error', (err: Error) => {
             reject(`Input stream error storeNodes : ${err}`)
         });
 
         queryStream.on('error', (err: Error) => {
-            reject(`Query stream error storeNodes: ${err}`)
+            reject(`Query stream error containments: ${err}`)
 
         });
 
@@ -111,15 +177,15 @@ export async function storeNodes(client: PoolClient, nodes: LionWebJsonNode[]) :
         inputStream.pipe(queryStream);
     });
     await new Promise<void>((resolve, reject) => {
-        const queryStream = client.query(copyFrom('COPY "repository:default".lionweb_containments(containment_language,containment_version,containment_key,children,node_id) FROM STDIN'))
-        const inputStream = prepareInputStreamContainments(nodes);
+        const queryStream = client.query(copyFrom('COPY "repository:default".lionweb_references(reference_language,reference_version,reference_key,targets,node_id) FROM STDIN'))
+        const inputStream = prepareInputStreamReferences(nodes);
 
         inputStream.on('error', (err: Error) => {
-            reject(`Input stream error storeNodes : ${err}`)
+            reject(`Input stream error references : ${err}`)
         });
 
         queryStream.on('error', (err: Error) => {
-            reject(`Query stream error containments: ${err}`)
+            reject(`Query stream error references: ${err}`)
 
         });
 
@@ -156,5 +222,5 @@ export async function storeNodes(client: PoolClient, nodes: LionWebJsonNode[]) :
 
         inputStream.pipe(queryStream);
     });
-    // TODO consider references
+
 }
