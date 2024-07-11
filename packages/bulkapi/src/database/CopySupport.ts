@@ -71,9 +71,14 @@ function prepareInputStreamReferences(nodes: LionWebJsonNode[]) : Duplex {
                 read_stream_string.push(separator);
 
                 // {"{\\"reference\\": \\"int\\", \\"resolveInfo\\": \\"int\\"}"
-                read_stream_string.push("{" + ref.targets.map(t =>
-                    `"{\\\\"reference\\\\": \\\\"${t.reference}\\\\", \\\\"resolveInfo\\\\": \\\\"${t.resolveInfo}\\\\"}"`
-                ).join(",") + "}");
+                read_stream_string.push("{" + ref.targets.map(t => {
+                    let refStr = "null";
+                    if (t.reference != null) {
+                        refStr = `\\\\"${t.reference}\\\\"`
+                    }
+
+                    return `"{\\\\"reference\\\\": ${refStr}, \\\\"resolveInfo\\\\": \\\\"${t.resolveInfo}\\\\"}"`
+                }).join(",") + "}");
                 read_stream_string.push(separator);
                 read_stream_string.push(node.id);
                 read_stream_string.push("\n");
