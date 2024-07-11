@@ -61,26 +61,24 @@ function prepareInputStreamReferences(nodes: LionWebJsonNode[]) : Duplex {
     const separator = "\t";
     const read_stream_string = new Duplex();
     nodes.forEach(node => {
-        node.properties.forEach(prop => {
+        node.references.forEach(ref => {
             try {
-                read_stream_string.push(prop.property.language);
+                read_stream_string.push(ref.reference.language);
                 read_stream_string.push(separator);
-                read_stream_string.push(prop.property.version);
+                read_stream_string.push(ref.reference.version);
                 read_stream_string.push(separator);
-                read_stream_string.push(prop.property.key);
+                read_stream_string.push(ref.reference.key);
                 read_stream_string.push(separator);
 
                 // {"{\\"reference\\": \\"int\\", \\"resolveInfo\\": \\"int\\"}"
-                if (prop.value == null) {
-                    read_stream_string.push("NULL");
-                } else {
-                    read_stream_string.push(JSON.stringify(prop.value));
-                }
+                read_stream_string.push("{" + ref.targets.map(t =>
+                    `"{\\\\"reference\\\\": \\\\"${t.reference}\\\\", \\\\"resolveInfo\\\\": \\\\"${t.resolveInfo}\\\\"}"`
+                ).join(",") + "}");
                 read_stream_string.push(separator);
                 read_stream_string.push(node.id);
                 read_stream_string.push("\n");
             } catch (e) {
-                throw Error(`ERROR WHEN POPULATING PROPERTIES STREAM ${e}`)
+                throw Error(`ERROR WHEN POPULATING REFERENCES STREAM ${e}`)
             }
         });
     })
