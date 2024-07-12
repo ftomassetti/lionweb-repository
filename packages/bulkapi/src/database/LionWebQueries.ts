@@ -44,6 +44,7 @@ import {
 } from "./QueryNode.js"
 import {storeNodes} from "./CopySupport.js";
 import pg from 'pg';
+import {performanceLog} from "./performance.js";
 
 
 export type NodeTreeResultType = {
@@ -143,6 +144,7 @@ export class LionWebQueries {
      * @param toBeStoredChunk
      */
     store = async (task: LionwebTask, repositoryData: RepositoryData, toBeStoredChunk: LionWebJsonChunk): Promise<QueryReturnType<StoreResponse>> => {
+        performanceLog("LW Repo side - store - start")
         console.log(`Got store request with ${toBeStoredChunk.nodes.length} nodes`)
         dbLogger.info("LionWebQueries.store")
         if (toBeStoredChunk === null || toBeStoredChunk === undefined) {
@@ -164,6 +166,7 @@ export class LionWebQueries {
         console.log("about bulkRetrieve")
         const databaseChunk = await this.context.bulkApiWorker.bulkRetrieve(repositoryData, tbsNodeAndChildIds, 0)
         console.log("bulkRetrieve done")
+        performanceLog("LW Repo side - store - bulk retrieve done")
         dbLogger.info("Bulk retrieve done ")
         const databaseChunkWrapper = new LionWebJsonChunkWrapper(databaseChunk.queryResult.chunk)
         dbLogger.info({chunk: databaseChunkWrapper.jsonChunk}, "database chunk")
@@ -190,6 +193,7 @@ export class LionWebQueries {
         console.log("diff calculated")
         dbLogger.info("STORE.CHANGES ")
         dbLogger.info(diff.diffResult.changes.map(ch => "    " + ch.changeMsg()))
+        performanceLog("LW Repo side - store - diff calculated")
 
         const toBeStoredNewNodes = diff.diffResult.changes.filter((ch): ch is NodeAdded => ch.changeType === "NodeAdded")
         const addedChildren: ChildAdded[] = diff.diffResult.changes.filter((ch): ch is ChildAdded => ch instanceof ChildAdded)
@@ -203,7 +207,7 @@ export class LionWebQueries {
         const annotationOrderChanged = diff.diffResult.changes.filter(
             (ch): ch is AnnotationOrderChanged => ch instanceof AnnotationOrderChanged
         )
-        const useCopy = toBeStoredNewNodes.length > 100;
+        const useCopy = toBeStoredNewNodes.length > 100 && false;
         console.log(`useCopy? ${useCopy}`)
 
         // Only children that already exist in the database
@@ -304,6 +308,7 @@ export class LionWebQueries {
             toBeStoredNewNodes.map(ch => ch.node.id)
         )
         if (reservedIds !== undefined && reservedIds.length > 0) {
+            performanceLog("LW Repo side - store - end")
             return {
                 status: HttpClientErrors.PreconditionFailed,
                 query: "",
@@ -337,10 +342,13 @@ export class LionWebQueries {
             queries = nextRepoVersionQuery(repositoryData.clientId) + queries
             const t0 = Date.now()
             console.log("about to execute query")
+            performanceLog("LW Repo side - store - about to execute query")
             const [multiResult] = await task.multi(repositoryData, queries)
             const t1 = Date.now()
+            performanceLog("LW Repo side - store - query executed")
             console.log(`query executed in ${t1-t0} ms`)
             await considerCopy(this.context.pgPool, toBeStoredNewNodes)
+            performanceLog("LW Repo side - store - end")
             return {
                 status: HttpSuccessCodes.Ok,
                 query: queries,
@@ -354,6 +362,7 @@ export class LionWebQueries {
             // Nothing to change, empty query
             const version = await this.getRepoVersion(repositoryData)
             await considerCopy(this.context.pgPool, toBeStoredNewNodes)
+            performanceLog("LW Repo side - store - end")
             return {
                 status: HttpSuccessCodes.Ok,
                 query: queries,
