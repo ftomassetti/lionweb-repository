@@ -37,6 +37,7 @@
     "mocha": "10.2.0",
     "prettier": "3.1.0",
     "ts-node": "10.9.2",
+    "ts-protoc-gen": "^0.15.0",
     "typescript": "5.2.2"
   },
   "workspaces": [
@@ -51,5 +52,9 @@
     "./packages/client",
     "./packages/test",
     "."
-  ]
+  ],
+  "dependencies": {
+    "protobufjs-cli": "^1.1.2",
+    "ts-proto": "^1.181.1"
+  }
 }

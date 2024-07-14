@@ -121,3 +121,6 @@ docker pull ghcr.io/lionweb-io/lionweb-repository:latest
 # alternatively you can specify a specific version
 docker pull ghcr.io/lionweb-io/lionweb-repository:release-lionweb-repository-0.1.1
 ```
+
+
+protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=packages/additionalapi/src/proto --ts_proto_opt=esModuleInterop=true --ts_proto_opt=env=node --ts_proto_opt=importSuffix=.js packages/additionalapi/src/proto/Chunk.proto

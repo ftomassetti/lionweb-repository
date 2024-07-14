@@ -1,5 +1,4 @@
 import { registerHistoryApi } from "@lionweb/repository-history"
-import http from "http"
 import express, { Express, NextFunction, Response, Request } from "express"
 import bodyParser from "body-parser"
 import cors from "cors"
@@ -14,6 +13,7 @@ import { registerAdditionalApi } from "@lionweb/repository-additionalapi"
 import { registerLanguagesApi } from "@lionweb/repository-languages"
 import { HttpClientErrors } from "@lionweb/repository-common"
 import { pinoHttp } from "pino-http"
+import * as http from "node:http";
 
 export const app: Express = express()
 
@@ -35,7 +35,8 @@ app.use(
     })
 )
 app.use(bodyParser.urlencoded({ extended: false }))
-app.use(bodyParser.json({ limit: ServerConfig.getInstance().bodyLimit() }))
+app.use(bodyParser.json({ limit: ServerConfig.getInstance().bodyLimit(), type: "application/json"}))
+app.use(bodyParser.raw({ inflate:true, limit: '500mb', type: 'application/protobuf'}))
 
 const expectedToken = ServerConfig.getInstance().expectedToken()
 
@@ -64,7 +65,7 @@ initializeCommons(pgp)
 const dbAdminApi = registerDBAdmin(app, DbConnection.getInstance(), postgresConnectionWithoutDatabase, pgp)
 registerBulkApi(app, DbConnection.getInstance(), pgp, dbConnection.pgPool)
 registerInspection(app, DbConnection.getInstance(), pgp)
-registerAdditionalApi(app, DbConnection.getInstance(), pgp)
+registerAdditionalApi(app, DbConnection.getInstance(), pgp, dbConnection.pgPool)
 registerLanguagesApi(app, DbConnection.getInstance(), pgp)
 registerHistoryApi(app, DbConnection.getInstance(), pgp)
 

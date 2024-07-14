@@ -1,11 +1,25 @@
 import { HttpSuccessCodes, QueryReturnType, RepositoryData, requestLogger } from "@lionweb/repository-common";
 import { AdditionalApiContext } from "../main.js";
 import { makeQueryNodeTreeForIdList } from "./QueryNode.js"
+import {ContainmentKey} from "@lionweb/repository-bulkapi";
+import {LionWebJsonNode} from "@lionweb/validation";
+import {performImport} from "./ImportLogic.js";
+import {LionWebJsonChunk} from "@lionweb/validation/src/json/LionWebJson";
 
 export type NodeTreeResultType = {
     id: string
     parent: string
     depth: number
+}
+
+export type BulkImportResultType = {
+    status: number
+    success: boolean
+}
+
+export type ImportData = {
+    containmentKey : ContainmentKey
+    treeData: LionWebJsonChunk
 }
 
 /**
@@ -28,5 +42,12 @@ export class AdditionalQueries {
         }
         query = makeQueryNodeTreeForIdList(nodeIdList, depthLimit)
         return { status: HttpSuccessCodes.Ok, query: query, queryResult: await this.context.dbConnection.query(repositoryData, query) }
+    }
+
+    bulkImport = async (repositoryData: RepositoryData, imports: ImportData[]): Promise<BulkImportResultType> => {
+        requestLogger.info("LionWebQueries.bulkImport")
+        const pool = this.context.pgPool;
+        const success = await performImport(await pool.connect(), imports)
+        return { status: HttpSuccessCodes.Ok, success }
     }
 }
