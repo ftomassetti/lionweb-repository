@@ -65,7 +65,7 @@ export function initSchemaWithoutHistory(schema: string): string {
     -- Creates properties table
     CREATE TABLE IF NOT EXISTS ${PROPERTIES_TABLE} (
         property          int   NOT NULL,
-        value             text WITH COMPRESSION,
+        value             text,
         node_id           text,
         PRIMARY KEY(property, node_id),
         FOREIGN KEY(property) REFERENCES ${METAPOINTERS_TABLE}(id)
