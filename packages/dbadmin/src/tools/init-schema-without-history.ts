@@ -110,14 +110,15 @@ export function initSchemaWithoutHistory(schema: string): string {
         ('repo.version', '0'),
         ('repo.client_id', 'repository_id');                 
         
-    -- TODO: Create indices to enable finding features for nodes quickly
+    -- Create indices to enable finding features for nodes quickly
     
-    -- CREATE INDEX ContainmentsNodesIndex ON ${CONTAINMENTS_TABLE} (node_id)
-    -- CREATE INDEX PropertiesNodesIndex   ON ${PROPERTIES_TABLE}   (node_id)
-    -- CREATE INDEX ReferencesNodesIndex   ON ${REFERENCES_TABLE}   (node_id)
-    -- CREATE INDEX ReservedIdsIndex       ON ${RESERVED_IDS_TABLE} (node_id)
-    -- CREATE INDEX MpsValuesIndex       ON ${METAPOINTERS_TABLE} (language, _version, key)
-    -- CREATE INDEX MpsIdIndex       ON ${METAPOINTERS_TABLE} (id)
+    CREATE INDEX MetaPointersIndex ON ${METAPOINTERS_TABLE} (id);
+    CREATE INDEX NodesIndex ON ${NODES_TABLE} (id);
+    CREATE INDEX ContainmentsNodesIndex ON ${CONTAINMENTS_TABLE} (containment, node_id);
+    CREATE INDEX PropertiesNodesIndex   ON ${PROPERTIES_TABLE}   (property, node_id);
+    CREATE INDEX ReferencesNodesIndex   ON ${REFERENCES_TABLE}   (reference, node_id);
+    CREATE INDEX ReservedIdsIndex       ON ${RESERVED_IDS_TABLE} (node_id);
+    CREATE INDEX MpsValuesIndex       ON ${METAPOINTERS_TABLE} (language, _version, key);
     
     -- SET repo.version = 0;
     -- SET repo.version = (SELECT value FROM CURRENT_DATA WHERE key = 'repo.version');
