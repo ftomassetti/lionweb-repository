@@ -1,0 +1,27 @@
+{
+  "name": "@lionweb/repository-inspection",
+  "version": "0.3.0",
+  "private": false,
+  "description": "Inspection routes for the lionweb repository",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "typings": "dist/index.d.ts",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LionWeb-io/lionweb-repository.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LionWeb-io/lionweb-repository/issues"
+  },
+  "scripts": {
+    "clean": "rm -rf node_modules/ && rm -rf dist/",
+    "build": "tsc",
+    "lint": "eslint src",
+    "test": "echo No tests in repository-inspection"
+  },
+  "dependencies": {
+    "@lionweb/repository-dbadmin": "0.3.0"
+  }
+}
