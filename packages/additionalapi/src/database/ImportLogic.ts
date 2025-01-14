@@ -11,7 +11,7 @@ import {
 import {
     DbConnection,
     HttpClientErrors,
-    HttpSuccessCodes, RepositoryData,
+    HttpSuccessCodes, RepositoryData, SCHEMA_PREFIX,
 } from "@lionweb/repository-common";
 import {BulkImportResultType} from "./AdditionalQueries.js";
 import {BulkImport} from "./AdditionalQueries.js";
@@ -214,7 +214,6 @@ async function pipeInputIntoQueryStream(client: PoolClient, query: string, input
 
             queryStream.on('error', (err: Error) => {
                 reject(`Query stream error on ${opDesc}: ${err}`)
-
             });
 
             inputStream.on('end', () => {
@@ -237,13 +236,13 @@ export async function storeNodes(client: PoolClient, repositoryData: RepositoryD
 
         const nodes = bulkImport.nodes;
 
-        await pipeInputIntoQueryStream(client, `COPY "${repositoryName}".lionweb_nodes(id,classifier,annotations,parent) FROM STDIN`,
+        await pipeInputIntoQueryStream(client, `COPY "${SCHEMA_PREFIX}${repositoryName}".lionweb_nodes(id,classifier,annotations,parent) FROM STDIN`,
             prepareInputStreamNodes(nodes, metaPointersTracker), "nodes insertion");
-        await pipeInputIntoQueryStream(client, `COPY "${repositoryName}".lionweb_containments(containment,children,node_id) FROM STDIN`,
+        await pipeInputIntoQueryStream(client, `COPY "${SCHEMA_PREFIX}${repositoryName}".lionweb_containments(containment,children,node_id) FROM STDIN`,
             prepareInputStreamContainments(nodes, metaPointersTracker), "containments insertion");
-        await pipeInputIntoQueryStream(client, `COPY "${repositoryName}".lionweb_references(reference,targets,node_id) FROM STDIN`,
+        await pipeInputIntoQueryStream(client, `COPY "${SCHEMA_PREFIX}${repositoryName}".lionweb_references(reference,targets,node_id) FROM STDIN`,
             prepareInputStreamReferences(nodes, metaPointersTracker), "references ${repositoryName}");
-        await pipeInputIntoQueryStream(client, `COPY "${repositoryName}".lionweb_properties(property,value,node_id) FROM STDIN`,
+        await pipeInputIntoQueryStream(client, `COPY "${SCHEMA_PREFIX}${repositoryName}".lionweb_properties(property,value,node_id) FROM STDIN`,
             prepareInputStreamProperties(nodes, metaPointersTracker), "properties ${repositoryName}");
     } finally {
         client.release(false)
@@ -258,13 +257,13 @@ async function storeNodesThroughFlatBuffers(client: PoolClient, repositoryData: 
     await populateThroughFlatBuffers(metaPointersTracker, bulkImport, repositoryData, dbConnection);
 
     const repositoryName = repositoryData.repository.repository_name
-    await pipeInputIntoQueryStream(client,`COPY "${repositoryName}".lionweb_nodes(id,classifier,annotations,parent) FROM STDIN`,
+    await pipeInputIntoQueryStream(client,`COPY "${SCHEMA_PREFIX}${repositoryName}".lionweb_nodes(id,classifier,annotations,parent) FROM STDIN`,
         prepareInputStreamNodesFlatBuffers(bulkImport, metaPointersTracker), "nodes insertion");
-    await pipeInputIntoQueryStream(client,`COPY "${repositoryName}".lionweb_containments(containment,children,node_id) FROM STDIN`,
+    await pipeInputIntoQueryStream(client,`COPY "${SCHEMA_PREFIX}${repositoryName}".lionweb_containments(containment,children,node_id) FROM STDIN`,
         prepareInputStreamContainmentsFlatBuffers(bulkImport, metaPointersTracker), "containments insertion");
-    await pipeInputIntoQueryStream(client,`COPY "${repositoryName}".lionweb_references(reference,targets,node_id) FROM STDIN`,
+    await pipeInputIntoQueryStream(client,`COPY "${SCHEMA_PREFIX}${repositoryName}".lionweb_references(reference,targets,node_id) FROM STDIN`,
         prepareInputStreamReferencesFlatBuffers(bulkImport, metaPointersTracker), "references ${repositoryName}");
-    await pipeInputIntoQueryStream(client,`COPY "${repositoryName}".lionweb_properties(property,value,node_id) FROM STDIN`,
+    await pipeInputIntoQueryStream(client,`COPY "${SCHEMA_PREFIX}${repositoryName}".lionweb_properties(property,value,node_id) FROM STDIN`,
         prepareInputStreamPropertiesFlatBuffers(bulkImport, metaPointersTracker), "properties ${repositoryName}");
     return metaPointersTracker
 }
